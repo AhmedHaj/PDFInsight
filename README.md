@@ -30,7 +30,13 @@ Make sure to replace `/path/to/your/input/directory` with the absolute path to t
 python entry_script.py
 ```
 
-5. Access the PDF Analyzer Dashboard in your web browser:
+5. When prompted to enter input directory, nter path to input directory after the "/input/" path. eg, your pdf files are in the local directory 'testing': 
+
+```
+Enter path to input directory: /input/testing
+```
+
+6. Access the PDFInsight Dashboard in your web browser:
 
 Open your web browser and navigate to [http://localhost:8050](http://localhost:8050) or [http://0.0.0.0:8050](http://0.0.0.0:8050).
 
