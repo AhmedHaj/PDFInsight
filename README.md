@@ -8,7 +8,9 @@ To run this project, you need to have [Docker](https://www.docker.com/products/d
 
 ## Getting Started
 
-1. Clone this repository
+0. Clone this repository
+
+1. Navigate to `PDFInsightFramework` directory.
 
 2. Build the Docker image:
 
@@ -44,6 +46,42 @@ Open your web browser and navigate to [http://localhost:8050](http://localhost:8
 
 When you're done using the application, you can exit the Docker container by typing `exit` in the container's terminal.
 
+## Running with Python only
+
+1. Navigate to `PDFInsightFramework` directory.
+
+2. Install requirements.txt:
+
+```
+python install -r requirements.txt
+```
+
+3. Run entry_script.py:
+
+```
+python entry_script.py
+```
+
+
+## Parsing Module
+
+We also offer the option to only parse PDF files if you want to preprocess and generate features from a given directory of PDF files for your own research.
+
+1. Naviagate to the `ParsingModule` directory.
+
+2. Run `parser.py`:
+
+```
+python parser.py
+```
+
+# Generating Hashes
+
+If you want to generate hashes for a directory of PDF files for use within the framework, simply use the `generate_hashes.py` script under the `HelpingScripts` directory.
+
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
