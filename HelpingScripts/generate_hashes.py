@@ -32,8 +32,8 @@ def create_hashes_csv(results, output_file='hashes.csv'):
         writer.writeheader()
 
         for file_path, ssdeep_hash in results:
-            file_name = os.path.basename(file_path)
-            link = f'https://example.com/{file_name}'  # Replace with actual link
+            file_name = os.path.splitext(os.path.basename(file_path))[0]
+            link = f'https://www.virustotal.com/gui/file/{file_name}/detection'  # Replace with actual link
             writer.writerow({'file_name': file_name, 'hash': ssdeep_hash, 'link': link})
 
 if __name__ == '__main__':

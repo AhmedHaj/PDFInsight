@@ -99,7 +99,7 @@ if __name__ == '__main__':
     output_table = pd.DataFrame({'file_name': df['file_name'], 'prediction': df['Class']})
     output_table['link'] = ''
     for file_path, matching_hash, file_name, link in matching_hashes:
-        output_table.loc[output_table['file_name'] == file_name, 'link'] = link
+        output_table.loc[output_table['file_name'] == file_name+'.pdf', 'link'] = link
 
     # Dash layout
     app.layout = html.Div([
