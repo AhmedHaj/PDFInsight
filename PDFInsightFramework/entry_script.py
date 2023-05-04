@@ -1,5 +1,6 @@
 import argparse
 import os
+import hashlib
 import re
 import dash
 import dash_core_components as dcc
@@ -16,44 +17,39 @@ from feature_engineering import valid_header, is_modified, is_malformed
 from ml_model import load_model
 from ssdeep import generate_hash, compare_hashes
 
-#def parse_args():
-    #parser = argparse.ArgumentParser(description='PDF Scanner')
-    #parser.add_argument('pdf_path', nargs='?', default=None, help='Path to input PDF file or directory')
-    #parser.add_argument('--output', '-o', help='Path to output file')
-    #parser.add_argument('--format', '-f', choices=['csv', 'json'], default='csv', help='Output format')
-    #parser.add_argument('--language', '-l', default='en', help='Language of input file')
-    #return parser.parse_args()
+def sha256_hash(file_path):
+    with open(file_path, 'rb') as f:
+        bytes = f.read()
+        return hashlib.sha256(bytes).hexdigest()
+
+def vt_detections(file_path):
+    # Use your existing code to get the number of detections on VirusTotal
+    detections = 0  # Replace this line with your implementation
+    total_vendors = 60
+    percentage = (detections / total_vendors) * 100
+    return f"{detections}/{total_vendors} ({percentage:.1f}%)"
 
 if __name__ == '__main__':
-    print(figlet_format('PDF Analyzer DEMO (WIP!)') + "\n")
-    #args = parse_args()
+    print(figlet_format('PDFInsight') + "\n")
 
-    # Prompt user for input path
     input_path = input("Enter path to input directory: ")
     output_dir = "logs"
 
     print("Starting PDF parsing...")
-    # Call the parse_pdf function with the specified input and output paths
     preprocessed_logs = parse_pdf(input_path, output_dir)
     
     print("PDF parsing complete, starting feature extraction...")
     df1 = feature_extraction1(preprocessed_logs)
     df2 = process_files(input_path)
-    df = pd.merge(df1, df2, on='file_name', how='left')  # Merge df1 and df2 on file_name
+    df = pd.merge(df1, df2, on='file_name', how='left')
     
     print("Feature extraction complete, starting feature engineering...")
     
-
-    # apply function to each row 
     df['valid_header'] = df.apply(lambda row : valid_header(row['pdf_header']), axis = 1)
     df.drop(['pdf_header'], inplace=True, axis=1)
     
-    # Create a dictionary of column names and their respective data types
     column_types = {col: 'int64' for col in df.columns if col != 'file_name'}
-
-    # Apply the astype() method to the DataFrame with the created dictionary
     df = df.astype(column_types)
-
 
     df['modified'] = df.apply(lambda row : is_modified(row['xref']), axis = 1)
     df['malformed'] = df.apply(lambda row : is_malformed(row['obj'],row['endobj'], row['stream'], row['endstream']), axis = 1)
@@ -62,10 +58,6 @@ if __name__ == '__main__':
     
     file_names = df['file_name']
     df.drop(['file_name'], inplace=True, axis = 1)
-    #df.drop(['pdf_path'], inplace = True, axis = 1)
-    #df.drop(['contains_text'], inplace = True, axis = 1)
-    
-
 
     print("Feature Engineering complete, outputting CSV file...")
 
@@ -73,9 +65,12 @@ if __name__ == '__main__':
     clf = load_model()
 
     predictions  = clf.predict(df)
+    confidence_scores = clf.predict_proba(df)[:, 1] * 100
 
     df['file_name'] = file_names
     df["Class"] = predictions
+
+
     print("Printing ssdeep hash...")
     generated_hashes = generate_hash(input_path)
     print("Comparing ssdeep hashes to known malicious hashes...")
@@ -86,22 +81,22 @@ if __name__ == '__main__':
         print(f'Matching hash: {matching_hash}')
         print(f'File name: {file_name}')
         print(f'Link: {link}\n')
-    
-    # Dash web application
+
     app = dash.Dash(__name__)
 
-    # Create visualizations
     malicious_pie_chart = px.pie(df, names='Class', title='Proportion of Malicious PDFs')
     top_features_bar_chart = px.bar(df, x='Class', y='JS', title='Top Features of Malicious PDFs')
 
-    # Add the link column to the output_table DataFrame
-    # Create a new DataFrame with the desired columns
-    output_table = pd.DataFrame({'file_name': df['file_name'], 'prediction': df['Class']})
+    output_table = pd.DataFrame({'file_name': df['file_name'], 'sha256': '', 'VT Detections': '', 'prediction': df['Class'], 'Confidence Score': confidence_scores})
+    for index, row in output_table.iterrows():
+        file_path = os.path.join(input_path, row['file_name'])
+        output_table.loc[index, 'sha256'] = sha256_hash(file_path)
+        output_table.loc[index, 'VT Detections'] = vt_detections(file_path)
+    
     output_table['link'] = ''
     for file_path, matching_hash, file_name, link in matching_hashes:
         output_table.loc[output_table['file_name'] == file_name+'.pdf', 'link'] = link
 
-    # Dash layout
     app.layout = html.Div([
         html.H1("PDF Analyzer Dashboard"),
         html.H2("Proportion of Malicious PDFs"),
@@ -113,7 +108,11 @@ if __name__ == '__main__':
             id='pdf_table',
             columns=[{"name": i, "id": i} for i in output_table.columns],
             data=output_table.to_dict("records"),
-            style_cell={'textAlign': 'left'},
+            style_cell={
+                'textAlign': 'left',
+                'fontFamily': 'Arial',
+                'fontSize': 16,
+            },
             sort_action="native",
             style_data_conditional=[
                 {
@@ -122,13 +121,12 @@ if __name__ == '__main__':
                 },
                 {
                     'if': {'filter_query': '{prediction} = "malicious"'},
-                    'backgroundColor': 'red',
-                    'color': 'white'
+                    'backgroundColor': '#ff9999',
+                    'color': 'black'
                 }
             ],
         )
-        # Additional visualizations and components can be added here
-    ]) 
-
+    ])
 
     app.run_server(debug=False, host="0.0.0.0", port="8050")
+
